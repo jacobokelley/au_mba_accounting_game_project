@@ -1,6 +1,3 @@
-===========================
-==  script.js (START)    ==
-===========================
 // ---------- GLOBAL STATE ----------
 let currentMode = null; // "financial" or "managerial"
 let questionCount = 10;
@@ -358,7 +355,3 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---------- INIT ----------
     resetState();
     showScreen("home");
-});
-===========================
-==  script.js (END)      ==
-===========================
