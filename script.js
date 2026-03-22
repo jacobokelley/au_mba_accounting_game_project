@@ -355,3 +355,193 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---------- INIT ----------
     resetState();
     showScreen("home");
+
+    // ---------- GAME LOGIC ----------
+
+function startGame() {
+    resetState();
+    currentQuestions = (currentMode === "financial")
+        ? [...financialQuestions]
+        : [...managerialQuestions];
+
+    // Shuffle questions
+    currentQuestions.sort(() => Math.random() - 0.5);
+
+    // Trim to selected count
+    currentQuestions = currentQuestions.slice(0, questionCount);
+
+    modeLabel.textContent = currentMode === "financial"
+        ? "Financial Accounting"
+        : "Managerial Accounting";
+
+    scoreLabel.textContent = `Score: 0`;
+    progressLabel.textContent = `1 / ${questionCount}`;
+
+    showScreen("game");
+    loadQuestion();
+}
+
+function loadQuestion() {
+    currentQuestion = currentQuestions[currentIndex];
+    questionTitle.textContent = `Question ${currentIndex + 1}`;
+    questionText.textContent = currentQuestion.prompt;
+
+    answerArea.innerHTML = "";
+    feedbackArea.classList.add("hidden");
+
+    if (currentQuestion.type === "mcq") {
+        renderMCQ();
+    } else if (currentQuestion.type === "fill") {
+        renderFill();
+    } else if (currentQuestion.type === "match") {
+        renderMatch();
+    }
+
+    submitBtn.classList.remove("hidden");
+    nextBtn.classList.add("hidden");
+}
+
+function renderMCQ() {
+    currentAnswer = null;
+
+    currentQuestion.choices.forEach((choice, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "choice-btn";
+        btn.textContent = choice;
+
+        btn.addEventListener("click", () => {
+            currentAnswer = idx;
+            document.querySelectorAll(".choice-btn").forEach(b => b.classList.remove("selected"));
+            btn.classList.add("selected");
+        });
+
+        answerArea.appendChild(btn);
+    });
+}
+
+function renderFill() {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "fill-input";
+
+    input.addEventListener("input", () => {
+        currentAnswer = input.value.trim().toLowerCase();
+    });
+
+    answerArea.appendChild(input);
+}
+
+function renderMatch() {
+    currentAnswer = {};
+
+    const leftCol = document.createElement("div");
+    const rightCol = document.createElement("div");
+
+    leftCol.className = "match-col";
+    rightCol.className = "match-col";
+
+    currentQuestion.pairs.forEach((pair, idx) => {
+        const leftItem = document.createElement("div");
+        leftItem.className = "match-item";
+        leftItem.textContent = pair.left;
+
+        const select = document.createElement("select");
+        select.className = "match-select";
+
+        const defaultOpt = document.createElement("option");
+        defaultOpt.textContent = "Select...";
+        defaultOpt.value = "";
+        select.appendChild(defaultOpt);
+
+        currentQuestion.pairs.forEach((p, i) => {
+            const opt = document.createElement("option");
+            opt.value = i;
+            opt.textContent = p.right;
+            select.appendChild(opt);
+        });
+
+        select.addEventListener("change", () => {
+            currentAnswer[idx] = parseInt(select.value, 10);
+        });
+
+        leftCol.appendChild(leftItem);
+        rightCol.appendChild(select);
+    });
+
+    answerArea.appendChild(leftCol);
+    answerArea.appendChild(rightCol);
+}
+
+function handleSubmit() {
+    if (currentAnswer === null || currentAnswer === "") return;
+
+    const isCorrect = evaluateAnswer();
+    answeredMap[currentIndex] = isCorrect;
+
+    if (isCorrect) score++;
+
+    scoreLabel.textContent = `Score: ${score}`;
+    showFeedback(isCorrect);
+
+    submitBtn.classList.add("hidden");
+    nextBtn.classList.remove("hidden");
+}
+
+function evaluateAnswer() {
+    if (currentQuestion.type === "mcq") {
+        return currentAnswer === currentQuestion.correctIndex;
+    }
+
+    if (currentQuestion.type === "fill") {
+        return currentAnswer === currentQuestion.answer.toLowerCase();
+    }
+
+    if (currentQuestion.type === "match") {
+        return currentQuestion.pairs.every((pair, idx) => {
+            return currentAnswer[idx] === idx;
+        });
+    }
+
+    return false;
+}
+
+function showFeedback(isCorrect) {
+    feedbackArea.classList.remove("hidden");
+    correctnessLabel.textContent = isCorrect ? "Correct!" : "Incorrect.";
+    explanationText.textContent = currentQuestion.explanation;
+}
+
+function goNext() {
+    if (currentIndex < questionCount - 1) {
+        currentIndex++;
+        progressLabel.textContent = `${currentIndex + 1} / ${questionCount}`;
+        loadQuestion();
+    } else {
+        showResults();
+    }
+}
+
+function goBack() {
+    if (currentIndex > 0) {
+        currentIndex--;
+        progressLabel.textContent = `${currentIndex + 1} / ${questionCount}`;
+        loadQuestion();
+    }
+}
+
+function showResults() {
+    showScreen("results");
+
+    resultsSummary.textContent = `You scored ${score} out of ${questionCount}.`;
+
+    let correct = score;
+    let incorrect = questionCount - score;
+
+    resultsDetail.textContent =
+        `Correct: ${correct} | Incorrect: ${incorrect}`;
+}
+
+function showHome() {
+    resetState();
+    showScreen("home");
+}
