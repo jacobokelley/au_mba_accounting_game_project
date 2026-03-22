@@ -3,17 +3,16 @@ let currentMode = null; // "financial" or "managerial"
 let questionCount = 10;
 let currentIndex = 0;
 let score = 0;
-let answeredCount = 0;
 let currentQuestions = [];
 let currentQuestion = null;
-let currentAnswer = null; // structure depends on type
-let answeredMap = {}; // store correctness by index (for back navigation)
+let currentAnswer = null;
+
+let answeredMap = {};          // index -> true/false
+let reviewData = [];           // per-question analytics
+let questionStartTime = null;  // ms timestamp
+let totalTimeMs = 0;
 
 // ---------- QUESTION BANKS ----------
-// NOTE: Replace these placeholder questions with your own,
-// derived from "Financial & Managerial Accounting for MBAs, 7e, Easton et al."
-// Keep the same structure.
-
 const financialQuestions = [
     // --- MULTIPLE CHOICE ---
     {
@@ -187,25 +186,25 @@ const managerialQuestions = [
     // --- FILL IN THE BLANK ---
     {
         type: "fill",
-        prompt: "Fill in the blank: Total fixed costs divided by contribution margin per unit equals the ______ point in units.",
+        prompt: "Total fixed costs divided by contribution margin per unit equals the ______ point in units.",
         answer: "break-even",
         explanation: "Break-even units = Fixed costs ÷ Contribution margin per unit."
     },
     {
         type: "fill",
-        prompt: "Fill in the blank: Costs that contain both fixed and variable components are called ______ costs.",
+        prompt: "Costs that contain both fixed and variable components are called ______ costs.",
         answer: "mixed",
         explanation: "Mixed costs include a fixed base plus a variable component."
     },
     {
         type: "fill",
-        prompt: "Fill in the blank: The difference between actual and budgeted results is called a ______.",
+        prompt: "The difference between actual and budgeted results is called a ______.",
         answer: "variance",
         explanation: "Variance analysis compares actual performance to budgeted expectations."
     },
     {
         type: "fill",
-        prompt: "Fill in the blank: A budget that adjusts for different activity levels is called a ______ budget.",
+        prompt: "A budget that adjusts for different activity levels is called a ______ budget.",
         answer: "flexible",
         explanation: "Flexible budgets adjust expected costs based on actual activity."
     },
@@ -247,7 +246,8 @@ const managerialQuestions = [
 const screens = {
     home: document.getElementById("home-screen"),
     game: document.getElementById("game-screen"),
-    results: document.getElementById("results-screen")
+    results: document.getElementById("results-screen"),
+    analytics: document.getElementById("analytics-screen")
 };
 
 const financialBtn = document.getElementById("financial-btn");
@@ -257,6 +257,7 @@ const questionCountSelect = document.getElementById("question-count");
 
 const homeBtn = document.getElementById("home-btn");
 const backBtn = document.getElementById("back-btn");
+
 const modeLabel = document.getElementById("mode-label");
 const progressLabel = document.getElementById("progress-label");
 const scoreLabel = document.getElementById("score-label");
@@ -276,98 +277,137 @@ const resultsSummary = document.getElementById("results-summary");
 const resultsDetail = document.getElementById("results-detail");
 const resultsHomeBtn = document.getElementById("results-home-btn");
 const resultsReplayBtn = document.getElementById("results-replay-btn");
+const viewBreakdownBtn = document.getElementById("view-breakdown-btn");
+
+const analyticsHomeBtn = document.getElementById("analytics-home-btn");
+const analyticsReplayBtn = document.getElementById("analytics-replay-btn");
+
+const overallAccuracyEl = document.getElementById("overall-accuracy");
+const typeBreakdownEl = document.getElementById("type-breakdown");
+const timeSpentEl = document.getElementById("time-spent");
+const reviewListEl = document.getElementById("review-list");
+
+const progressContainer = document.getElementById("progress-container");
+const progressBar = document.getElementById("progress-bar");
+
+const themeToggleBtn = document.getElementById("theme-toggle");
 
 // ---------- SCREEN MANAGEMENT ----------
 function showScreen(name) {
     Object.values(screens).forEach(s => s.classList.remove("active"));
     screens[name].classList.add("active");
+
+    if (name === "game") {
+        progressContainer.classList.remove("hidden");
+    } else {
+        progressContainer.classList.add("hidden");
+    }
 }
 
 function resetState() {
     currentMode = null;
-    questionCount = 10;
+    questionCount = parseInt(questionCountSelect.value, 10) || 10;
     currentIndex = 0;
     score = 0;
-    answeredCount = 0;
     currentQuestions = [];
     currentQuestion = null;
     currentAnswer = null;
     answeredMap = {};
+    reviewData = [];
+    totalTimeMs = 0;
+    questionStartTime = null;
+
     financialBtn.classList.remove("selected");
     managerialBtn.classList.remove("selected");
     startGameBtn.disabled = true;
-    questionCountSelect.value = "10";
+
+    scoreLabel.textContent = "Score: 0";
+    progressLabel.textContent = "";
+    modeLabel.textContent = "";
+    answerArea.innerHTML = "";
+    feedbackArea.classList.add("hidden");
 }
 
+// ---------- THEME TOGGLE ----------
+themeToggleBtn.addEventListener("click", () => {
+    document.body.classList.toggle("dark");
+    const isDark = document.body.classList.contains("dark");
+    themeToggleBtn.textContent = isDark ? "☀️" : "🌙";
+});
+
 // ---------- EVENT WIRING ----------
-document.addEventListener('DOMContentLoaded', () => {
-    
-    financialBtn.addEventListener("click", () => {
-        currentMode = "financial";
-        financialBtn.classList.add("selected");
-        managerialBtn.classList.remove("selected");
-        startGameBtn.disabled = false;
-    });
+financialBtn.addEventListener("click", () => {
+    currentMode = "financial";
+    financialBtn.classList.add("selected");
+    managerialBtn.classList.remove("selected");
+    startGameBtn.disabled = false;
+});
 
-    managerialBtn.addEventListener("click", () => {
-        currentMode = "managerial";
-        managerialBtn.classList.add("selected");
-        financialBtn.classList.remove("selected");
-        startGameBtn.disabled = false;
-    });
+managerialBtn.addEventListener("click", () => {
+    currentMode = "managerial";
+    managerialBtn.classList.add("selected");
+    financialBtn.classList.remove("selected");
+    startGameBtn.disabled = false;
+});
 
-    questionCountSelect.addEventListener("change", () => {
-        questionCount = parseInt(questionCountSelect.value, 10);
-    });
+questionCountSelect.addEventListener("change", () => {
+    questionCount = parseInt(questionCountSelect.value, 10);
+});
 
-    startGameBtn.addEventListener("click", () => {
-        startGame();
-    });
+startGameBtn.addEventListener("click", () => {
+    startGame();
+});
 
-    homeBtn.addEventListener("click", () => {
-        showHome();
-    });
+homeBtn.addEventListener("click", () => {
+    showHome();
+});
 
-    backBtn.addEventListener("click", () => {
-        goBack();
-    });
+backBtn.addEventListener("click", () => {
+    goBack();
+});
 
-    submitBtn.addEventListener("click", () => {
-        handleSubmit();
-    });
+submitBtn.addEventListener("click", () => {
+    handleSubmit();
+});
 
-    nextBtn.addEventListener("click", () => {
-        goNext();
-    });
+nextBtn.addEventListener("click", () => {
+    goNext();
+});
 
-    resultsHomeBtn.addEventListener("click", () => {
-        showHome();
-    });
+resultsHomeBtn.addEventListener("click", () => {
+    showHome();
+});
 
-    resultsReplayBtn.addEventListener("click", () => {
-        if (!currentMode) {
-            showHome();
-        } else {
-            startGame();
-        }
-    });
+resultsReplayBtn.addEventListener("click", () => {
+    startGame();
+});
 
-    // ---------- INIT ----------
-    resetState();
-    showScreen("home");
+viewBreakdownBtn.addEventListener("click", () => {
+    populateAnalytics();
+    showScreen("analytics");
+});
 
-    // ---------- GAME LOGIC ----------
+analyticsHomeBtn.addEventListener("click", () => {
+    showHome();
+});
 
+analyticsReplayBtn.addEventListener("click", () => {
+    startGame();
+});
+
+// ---------- INIT ----------
+resetState();
+showScreen("home");
+
+// ---------- GAME LOGIC ----------
 function startGame() {
     resetState();
+
     currentQuestions = (currentMode === "financial")
         ? [...financialQuestions]
         : [...managerialQuestions];
 
-    // Shuffle questions
     currentQuestions.sort(() => Math.random() - 0.5);
-
-    // Trim to selected count
     currentQuestions = currentQuestions.slice(0, questionCount);
 
     modeLabel.textContent = currentMode === "financial"
@@ -375,7 +415,7 @@ function startGame() {
         : "Managerial Accounting";
 
     scoreLabel.textContent = `Score: 0`;
-    progressLabel.textContent = `1 / ${questionCount}`;
+    updateProgressUI();
 
     showScreen("game");
     loadQuestion();
@@ -388,6 +428,7 @@ function loadQuestion() {
 
     answerArea.innerHTML = "";
     feedbackArea.classList.add("hidden");
+    currentAnswer = null;
 
     if (currentQuestion.type === "mcq") {
         renderMCQ();
@@ -399,8 +440,20 @@ function loadQuestion() {
 
     submitBtn.classList.remove("hidden");
     nextBtn.classList.add("hidden");
+
+    questionStartTime = Date.now();
+    updateProgressUI();
 }
 
+function updateProgressUI() {
+    if (!questionCount) return;
+    const current = currentIndex + 1;
+    progressLabel.textContent = `${current} / ${questionCount}`;
+    const pct = Math.max(0, Math.min(100, (currentIndex / questionCount) * 100));
+    progressBar.style.width = `${pct}%`;
+}
+
+// ---------- RENDERING ----------
 function renderMCQ() {
     currentAnswer = null;
 
@@ -461,7 +514,7 @@ function renderMatch() {
         });
 
         select.addEventListener("change", () => {
-            currentAnswer[idx] = parseInt(select.value, 10);
+            currentAnswer[idx] = select.value === "" ? null : parseInt(select.value, 10);
         });
 
         leftCol.appendChild(leftItem);
@@ -472,16 +525,29 @@ function renderMatch() {
     answerArea.appendChild(rightCol);
 }
 
+// ---------- ANSWERING & SCORING ----------
 function handleSubmit() {
-    if (currentAnswer === null || currentAnswer === "") return;
+    if (currentQuestion.type === "mcq" && currentAnswer === null) return;
+    if (currentQuestion.type === "fill" && (!currentAnswer || currentAnswer === "")) return;
+    if (currentQuestion.type === "match") {
+        const needed = currentQuestion.pairs.length;
+        const keys = Object.keys(currentAnswer || {});
+        if (keys.length < needed || keys.some(k => currentAnswer[k] === null || currentAnswer[k] === undefined)) {
+            return;
+        }
+    }
+
+    const timeTakenMs = Date.now() - (questionStartTime || Date.now());
+    totalTimeMs += timeTakenMs;
 
     const isCorrect = evaluateAnswer();
     answeredMap[currentIndex] = isCorrect;
-
     if (isCorrect) score++;
 
     scoreLabel.textContent = `Score: ${score}`;
     showFeedback(isCorrect);
+
+    recordReviewData(isCorrect, timeTakenMs);
 
     submitBtn.classList.add("hidden");
     nextBtn.classList.remove("hidden");
@@ -497,9 +563,7 @@ function evaluateAnswer() {
     }
 
     if (currentQuestion.type === "match") {
-        return currentQuestion.pairs.every((pair, idx) => {
-            return currentAnswer[idx] === idx;
-        });
+        return currentQuestion.pairs.every((pair, idx) => currentAnswer[idx] === idx);
     }
 
     return false;
@@ -511,10 +575,46 @@ function showFeedback(isCorrect) {
     explanationText.textContent = currentQuestion.explanation;
 }
 
+function recordReviewData(isCorrect, timeTakenMs) {
+    let userAnswerText = "";
+    let correctAnswerText = "";
+
+    if (currentQuestion.type === "mcq") {
+        userAnswerText = currentAnswer !== null
+            ? currentQuestion.choices[currentAnswer]
+            : "(no answer)";
+        correctAnswerText = currentQuestion.choices[currentQuestion.correctIndex];
+    } else if (currentQuestion.type === "fill") {
+        userAnswerText = currentAnswer || "(no answer)";
+        correctAnswerText = currentQuestion.answer;
+    } else if (currentQuestion.type === "match") {
+        const pairs = currentQuestion.pairs;
+        const lines = pairs.map((p, idx) => {
+            const userIdx = currentAnswer[idx];
+            const userRight = (userIdx !== null && userIdx !== undefined)
+                ? pairs[userIdx].right
+                : "(no selection)";
+            return `${p.left} → Your: ${userRight} | Correct: ${p.right}`;
+        });
+        userAnswerText = lines.join(" | ");
+        correctAnswerText = "(see mapping)";
+    }
+
+    reviewData[currentIndex] = {
+        index: currentIndex,
+        type: currentQuestion.type,
+        prompt: currentQuestion.prompt,
+        isCorrect,
+        userAnswerText,
+        correctAnswerText,
+        timeMs: timeTakenMs
+    };
+}
+
+// ---------- NAVIGATION ----------
 function goNext() {
     if (currentIndex < questionCount - 1) {
         currentIndex++;
-        progressLabel.textContent = `${currentIndex + 1} / ${questionCount}`;
         loadQuestion();
     } else {
         showResults();
@@ -524,7 +624,6 @@ function goNext() {
 function goBack() {
     if (currentIndex > 0) {
         currentIndex--;
-        progressLabel.textContent = `${currentIndex + 1} / ${questionCount}`;
         loadQuestion();
     }
 }
@@ -534,14 +633,81 @@ function showResults() {
 
     resultsSummary.textContent = `You scored ${score} out of ${questionCount}.`;
 
-    let correct = score;
-    let incorrect = questionCount - score;
+    const correct = score;
+    const incorrect = questionCount - score;
+    const pct = questionCount ? Math.round((correct / questionCount) * 100) : 0;
 
     resultsDetail.textContent =
-        `Correct: ${correct} | Incorrect: ${incorrect}`;
+        `Correct: ${correct} | Incorrect: ${incorrect} | Accuracy: ${pct}%`;
 }
 
 function showHome() {
     resetState();
     showScreen("home");
+}
+
+// ---------- ANALYTICS ----------
+function populateAnalytics() {
+    const totalQuestions = questionCount || reviewData.length || 1;
+    const correctCount = reviewData.filter(r => r && r.isCorrect).length;
+    const accuracyPct = Math.round((correctCount / totalQuestions) * 100);
+
+    overallAccuracyEl.textContent = `${accuracyPct}% (${correctCount}/${totalQuestions})`;
+
+    const typeStats = {};
+    reviewData.forEach(r => {
+        if (!r) return;
+        if (!typeStats[r.type]) {
+            typeStats[r.type] = { correct: 0, total: 0 };
+        }
+        typeStats[r.type].total += 1;
+        if (r.isCorrect) typeStats[r.type].correct += 1;
+    });
+
+    typeBreakdownEl.innerHTML = "";
+    Object.keys(typeStats).forEach(type => {
+        const li = document.createElement("li");
+        const stat = typeStats[type];
+        const pct = stat.total ? Math.round((stat.correct / stat.total) * 100) : 0;
+        const label =
+            type === "mcq" ? "Multiple Choice" :
+            type === "fill" ? "Fill in the Blank" :
+            type === "match" ? "Matching" : type;
+
+        li.textContent = `${label}: ${stat.correct}/${stat.total} (${pct}%)`;
+        typeBreakdownEl.appendChild(li);
+    });
+
+    const totalSeconds = Math.round(totalTimeMs / 1000);
+    timeSpentEl.textContent = `${totalSeconds} seconds total (~${(totalSeconds / totalQuestions || 0).toFixed(1)} s/question)`;
+
+    reviewListEl.innerHTML = "";
+    reviewData.forEach((r, idx) => {
+        if (!r) return;
+        const item = document.createElement("div");
+        item.className = "review-item";
+
+        const header = document.createElement("div");
+        header.className = "review-header";
+        header.textContent = `Q${idx + 1} — ${r.isCorrect ? "Correct" : "Incorrect"}`;
+
+        const prompt = document.createElement("p");
+        prompt.className = "review-prompt";
+        prompt.textContent = r.prompt;
+
+        const answers = document.createElement("p");
+        answers.className = "review-answers";
+        answers.textContent = `Your answer: ${r.userAnswerText} | Correct: ${r.correctAnswerText}`;
+
+        const time = document.createElement("p");
+        time.className = "review-time";
+        time.textContent = `Time: ${Math.round(r.timeMs / 1000)} seconds`;
+
+        item.appendChild(header);
+        item.appendChild(prompt);
+        item.appendChild(answers);
+        item.appendChild(time);
+
+        reviewListEl.appendChild(item);
+    });
 }
