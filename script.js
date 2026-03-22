@@ -545,3 +545,5 @@ function showHome() {
     resetState();
     showScreen("home");
 }
+
+}
