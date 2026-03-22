@@ -2,28 +2,93 @@
 ==  index.html (START)   ==
 ===========================
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Accounting Learning Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <header class="app-header">
+        <h1>Accounting Learning Game</h1>
+        <p class="subtitle">Financial & Managerial Accounting Practice</p>
+    </header>
 
     <!-- HOME SCREEN -->
-    <section id="home-screen">
-        <!-- content here -->
+    <section id="home-screen" class="screen active">
+        <div class="card">
+            <h2>Select Game Mode</h2>
+
+            <div class="mode-buttons">
+                <button id="financial-btn" class="mode-btn">Financial Accounting</button>
+                <button id="managerial-btn" class="mode-btn">Managerial Accounting</button>
+            </div>
+
+            <div class="options-row">
+                <label for="question-count">Number of questions:</label>
+                <select id="question-count">
+                    <option value="10">10 questions</option>
+                    <option value="15">15 questions</option>
+                    <option value="20">20 questions</option>
+                </select>
+            </div>
+
+            <button id="start-game-btn" class="primary-btn" disabled>Start Game</button>
+
+            <p class="note">
+                Questions are a mix of multiple choice, fill in the blank, and matching.
+                You’ll see explanations after every question.
+            </p>
+        </div>
     </section>
 
     <!-- GAME SCREEN -->
-    <section id="game-screen">
-        <!-- content here -->
+    <section id="game-screen" class="screen">
+        <div class="top-bar">
+            <button id="home-btn" class="secondary-btn">Home</button>
+            <button id="back-btn" class="secondary-btn">Back</button>
+            <div class="status">
+                <span id="mode-label"></span>
+                <span id="progress-label"></span>
+                <span id="score-label"></span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 id="question-title">Question</h2>
+            <p id="question-text" class="question-text"></p>
+
+            <div id="answer-area"></div>
+
+            <div id="feedback-area" class="feedback-area hidden">
+                <p id="correctness-label"></p>
+                <p id="explanation-text"></p>
+            </div>
+
+            <div class="controls-row">
+                <button id="submit-btn" class="primary-btn">Submit Answer</button>
+                <button id="next-btn" class="primary-btn hidden">Next Question</button>
+            </div>
+        </div>
     </section>
 
     <!-- RESULTS SCREEN -->
-    <section id="results-screen">
-        <!-- content here -->
+    <section id="results-screen" class="screen">
+        <div class="card">
+            <h2>Game Summary</h2>
+            <p id="results-summary"></p>
+            <p id="results-detail"></p>
+
+            <div class="results-buttons">
+                <button id="results-home-btn" class="secondary-btn">Return Home</button>
+                <button id="results-replay-btn" class="primary-btn">Play Again</button>
+            </div>
+        </div>
     </section>
+
+    <footer class="app-footer">
+        <small>Prototype learning tool — plug in your own questions from Easton et al., 7e.</small>
+    </footer>
 
     <script src="script.js"></script>
 </body>
