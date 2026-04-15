@@ -68,6 +68,16 @@ body {
     margin-bottom: 4px;
 }
 
+.app-header h1 a {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.app-header h1 a:hover {
+    text-decoration: underline;
+}
+
 .subtitle {
     font-size: 0.9rem;
     opacity: 0.85;

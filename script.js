@@ -258,6 +258,7 @@ const questionCountSelect = document.getElementById("question-count");
 const modeHint = document.getElementById("mode-hint");
 
 const homeBtn = document.getElementById("home-btn");
+const titleLink = document.getElementById("title-link");
 const backBtn = document.getElementById("back-btn");
 
 const modeLabel = document.getElementById("mode-label");
@@ -374,6 +375,11 @@ startGameBtn.addEventListener("click", () => {
 });
 
 homeBtn.addEventListener("click", () => {
+    showHome();
+});
+
+titleLink.addEventListener("click", (e) => {
+    e.preventDefault();
     showHome();
 });
 
