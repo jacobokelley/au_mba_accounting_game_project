@@ -428,6 +428,11 @@ function startGame() {
         ? [...financialQuestions]
         : [...managerialQuestions];
 
+    // Clone MCQ questions so shuffling choices doesn't mutate the original bank
+    currentQuestions = currentQuestions.map(q =>
+        q.type === "mcq" ? { ...q, choices: [...q.choices] } : q
+    );
+
     currentQuestions.sort(() => Math.random() - 0.5);
     currentQuestions = currentQuestions.slice(0, questionCount);
 
@@ -495,6 +500,12 @@ function updateProgressUI() {
 // ---------- RENDERING ----------
 function renderMCQ() {
     currentAnswer = null;
+
+    // Shuffle choices while preserving which one is correct
+    const indices = currentQuestion.choices.map((_, i) => i);
+    indices.sort(() => Math.random() - 0.5);
+    currentQuestion.choices = indices.map(i => currentQuestion.choices[i]);
+    currentQuestion.correctIndex = indices.indexOf(currentQuestion.correctIndex);
 
     currentQuestion.choices.forEach((choice, idx) => {
         const btn = document.createElement("button");
