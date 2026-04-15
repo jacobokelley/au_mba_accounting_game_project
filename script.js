@@ -700,16 +700,13 @@ function goBack() {
 
 function showResults() {
     clearInterval(timerInterval);
-    showScreen("results");
-
-    resultsSummary.textContent = `You scored ${score} out of ${questionCount}.`;
 
     const correct = score;
     const incorrect = questionCount - score;
     const pct = questionCount ? Math.round((correct / questionCount) * 100) : 0;
 
-    resultsDetail.textContent =
-        `Correct: ${correct} | Incorrect: ${incorrect} | Accuracy: ${pct}%`;
+    populateAnalytics();
+    showScreen("analytics");
 
     if (pct >= 80) {
         launchConfetti();
