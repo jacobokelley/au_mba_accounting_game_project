@@ -24,6 +24,7 @@
     <!-- PROGRESS BAR (visible only during game) -->
     <div id="progress-container" class="progress-container hidden">
         <div id="progress-bar" class="progress-bar"></div>
+        <span id="progress-bar-label" class="progress-bar-label"></span>
     </div>
 
     <!-- HOME SCREEN -->
@@ -32,9 +33,19 @@
             <h2>Select Game Mode</h2>
 
             <div class="mode-buttons">
-                <button id="financial-btn" class="mode-btn">Financial Accounting</button>
-                <button id="managerial-btn" class="mode-btn">Managerial Accounting</button>
+                <button id="financial-btn" class="mode-btn">
+                    <span class="mode-icon">📊</span>
+                    <span class="mode-title">Financial Accounting</span>
+                    <span class="mode-desc">Balance sheets, income statements, accruals &amp; more</span>
+                </button>
+                <button id="managerial-btn" class="mode-btn">
+                    <span class="mode-icon">📈</span>
+                    <span class="mode-title">Managerial Accounting</span>
+                    <span class="mode-desc">CVP, budgeting, costing systems &amp; variances</span>
+                </button>
             </div>
+
+            <p id="mode-hint" class="mode-hint">Select a mode above to continue</p>
 
             <div class="options-row">
                 <label for="question-count">Number of questions:</label>
@@ -57,13 +68,16 @@
     <!-- GAME SCREEN -->
     <section id="game-screen" class="screen">
         <div class="top-bar">
-            <button id="home-btn" class="secondary-btn">Home</button>
-            <button id="back-btn" class="secondary-btn">Back</button>
+            <div class="top-bar-nav">
+                <button id="home-btn" class="secondary-btn">Home</button>
+                <button id="back-btn" class="secondary-btn">Back</button>
+            </div>
 
             <div class="status">
-                <span id="mode-label"></span>
-                <span id="progress-label"></span>
-                <span id="score-label"></span>
+                <span id="mode-label" class="status-badge"></span>
+                <span id="progress-label" class="status-badge"></span>
+                <span id="score-label" class="status-badge"></span>
+                <span id="timer-label" class="status-badge timer-badge">⏱ 0s</span>
             </div>
         </div>
 
@@ -106,8 +120,11 @@
             <h2>Performance Analytics</h2>
 
             <div class="analytics-grid">
-                <div class="analytics-box">
+                <div class="analytics-box accuracy-box">
                     <h3>Overall Accuracy</h3>
+                    <div class="accuracy-donut" id="accuracy-donut">
+                        <span class="accuracy-donut-label" id="accuracy-donut-label"></span>
+                    </div>
                     <p id="overall-accuracy" class="analytics-value"></p>
                 </div>
 
@@ -135,6 +152,9 @@
     <footer class="app-footer">
         <small>Developed for Auburn MBA — Professional Learning Prototype</small>
     </footer>
+
+    <!-- CONFETTI CONTAINER -->
+    <div id="confetti-container" class="confetti-container hidden"></div>
 
     <script src="script.js"></script>
 </body>
