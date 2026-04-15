@@ -11,6 +11,7 @@ let answeredMap = {};          // index -> true/false
 let reviewData = [];           // per-question analytics
 let questionStartTime = null;  // ms timestamp
 let totalTimeMs = 0;
+let timerInterval = null;      // live per-question timer
 
 // ---------- QUESTION BANKS ----------
 const financialQuestions = [
@@ -254,6 +255,7 @@ const financialBtn = document.getElementById("financial-btn");
 const managerialBtn = document.getElementById("managerial-btn");
 const startGameBtn = document.getElementById("start-game-btn");
 const questionCountSelect = document.getElementById("question-count");
+const modeHint = document.getElementById("mode-hint");
 
 const homeBtn = document.getElementById("home-btn");
 const backBtn = document.getElementById("back-btn");
@@ -289,6 +291,12 @@ const reviewListEl = document.getElementById("review-list");
 
 const progressContainer = document.getElementById("progress-container");
 const progressBar = document.getElementById("progress-bar");
+const progressBarLabel = document.getElementById("progress-bar-label");
+
+const timerLabel = document.getElementById("timer-label");
+const confettiContainer = document.getElementById("confetti-container");
+const accuracyDonut = document.getElementById("accuracy-donut");
+const accuracyDonutLabel = document.getElementById("accuracy-donut-label");
 
 const themeToggleBtn = document.getElementById("theme-toggle");
 
@@ -317,15 +325,20 @@ function resetState() {
     totalTimeMs = 0;
     questionStartTime = null;
 
+    clearInterval(timerInterval);
+    timerInterval = null;
+
     financialBtn.classList.remove("selected");
     managerialBtn.classList.remove("selected");
     startGameBtn.disabled = true;
+    modeHint.style.display = "";
 
     scoreLabel.textContent = "Score: 0";
     progressLabel.textContent = "";
     modeLabel.textContent = "";
     answerArea.innerHTML = "";
     feedbackArea.classList.add("hidden");
+    feedbackArea.classList.remove("correct", "incorrect");
 }
 
 // ---------- THEME TOGGLE ----------
@@ -341,6 +354,7 @@ financialBtn.addEventListener("click", () => {
     financialBtn.classList.add("selected");
     managerialBtn.classList.remove("selected");
     startGameBtn.disabled = false;
+    modeHint.style.display = "none";
 });
 
 managerialBtn.addEventListener("click", () => {
@@ -348,6 +362,7 @@ managerialBtn.addEventListener("click", () => {
     managerialBtn.classList.add("selected");
     financialBtn.classList.remove("selected");
     startGameBtn.disabled = false;
+    modeHint.style.display = "none";
 });
 
 questionCountSelect.addEventListener("change", () => {
@@ -428,6 +443,7 @@ function loadQuestion() {
 
     answerArea.innerHTML = "";
     feedbackArea.classList.add("hidden");
+    feedbackArea.classList.remove("correct", "incorrect");
     currentAnswer = null;
 
     if (currentQuestion.type === "mcq") {
@@ -441,7 +457,23 @@ function loadQuestion() {
     submitBtn.classList.remove("hidden");
     nextBtn.classList.add("hidden");
 
+    // Restart card animation
+    const card = document.querySelector("#game-screen .card");
+    if (card) {
+        card.style.animation = "none";
+        card.offsetHeight; // reflow
+        card.style.animation = "";
+    }
+
+    // Start live timer
+    clearInterval(timerInterval);
     questionStartTime = Date.now();
+    timerLabel.textContent = "⏱ 0s";
+    timerInterval = setInterval(() => {
+        const elapsed = Math.round((Date.now() - questionStartTime) / 1000);
+        timerLabel.textContent = `⏱ ${elapsed}s`;
+    }, 1000);
+
     updateProgressUI();
 }
 
@@ -449,6 +481,7 @@ function updateProgressUI() {
     if (!questionCount) return;
     const current = currentIndex + 1;
     progressLabel.textContent = `${current} / ${questionCount}`;
+    progressBarLabel.textContent = `${current} / ${questionCount}`;
     const pct = Math.max(0, Math.min(100, (currentIndex / questionCount) * 100));
     progressBar.style.width = `${pct}%`;
 }
@@ -487,6 +520,9 @@ function renderFill() {
 function renderMatch() {
     currentAnswer = {};
 
+    const row = document.createElement("div");
+    row.className = "match-row";
+
     const leftCol = document.createElement("div");
     const rightCol = document.createElement("div");
 
@@ -521,8 +557,9 @@ function renderMatch() {
         rightCol.appendChild(select);
     });
 
-    answerArea.appendChild(leftCol);
-    answerArea.appendChild(rightCol);
+    row.appendChild(leftCol);
+    row.appendChild(rightCol);
+    answerArea.appendChild(row);
 }
 
 // ---------- ANSWERING & SCORING ----------
@@ -537,6 +574,8 @@ function handleSubmit() {
         }
     }
 
+    // Stop the live timer
+    clearInterval(timerInterval);
     const timeTakenMs = Date.now() - (questionStartTime || Date.now());
     totalTimeMs += timeTakenMs;
 
@@ -570,9 +609,23 @@ function evaluateAnswer() {
 }
 
 function showFeedback(isCorrect) {
-    feedbackArea.classList.remove("hidden");
-    correctnessLabel.textContent = isCorrect ? "Correct!" : "Incorrect.";
+    feedbackArea.classList.remove("hidden", "correct", "incorrect");
+    feedbackArea.classList.add(isCorrect ? "correct" : "incorrect");
+    correctnessLabel.textContent = isCorrect ? "✓ Correct!" : "✗ Incorrect.";
     explanationText.textContent = currentQuestion.explanation;
+
+    // Mark MCQ choices as correct/wrong after submission
+    if (currentQuestion.type === "mcq") {
+        document.querySelectorAll(".choice-btn").forEach((btn, idx) => {
+            btn.disabled = true;
+            btn.classList.remove("selected");
+            if (idx === currentQuestion.correctIndex) {
+                btn.classList.add("correct-answer");
+            } else if (idx === currentAnswer && currentAnswer !== currentQuestion.correctIndex) {
+                btn.classList.add("wrong-answer");
+            }
+        });
+    }
 }
 
 function recordReviewData(isCorrect, timeTakenMs) {
@@ -629,6 +682,7 @@ function goBack() {
 }
 
 function showResults() {
+    clearInterval(timerInterval);
     showScreen("results");
 
     resultsSummary.textContent = `You scored ${score} out of ${questionCount}.`;
@@ -639,9 +693,14 @@ function showResults() {
 
     resultsDetail.textContent =
         `Correct: ${correct} | Incorrect: ${incorrect} | Accuracy: ${pct}%`;
+
+    if (pct >= 80) {
+        launchConfetti();
+    }
 }
 
 function showHome() {
+    clearInterval(timerInterval);
     resetState();
     showScreen("home");
 }
@@ -653,6 +712,12 @@ function populateAnalytics() {
     const accuracyPct = Math.round((correctCount / totalQuestions) * 100);
 
     overallAccuracyEl.textContent = `${accuracyPct}% (${correctCount}/${totalQuestions})`;
+
+    // Update donut chart
+    if (accuracyDonut) {
+        accuracyDonut.style.setProperty("--pct", `${accuracyPct}%`);
+        accuracyDonutLabel.textContent = `${accuracyPct}%`;
+    }
 
     const typeStats = {};
     reviewData.forEach(r => {
@@ -685,11 +750,11 @@ function populateAnalytics() {
     reviewData.forEach((r, idx) => {
         if (!r) return;
         const item = document.createElement("div");
-        item.className = "review-item";
+        item.className = `review-item ${r.isCorrect ? "correct" : "incorrect"}`;
 
         const header = document.createElement("div");
-        header.className = "review-header";
-        header.textContent = `Q${idx + 1} — ${r.isCorrect ? "Correct" : "Incorrect"}`;
+        header.className = `review-header ${r.isCorrect ? "correct" : "incorrect"}`;
+        header.textContent = `Q${idx + 1} — ${r.isCorrect ? "✓ Correct" : "✗ Incorrect"}`;
 
         const prompt = document.createElement("p");
         prompt.className = "review-prompt";
@@ -710,4 +775,31 @@ function populateAnalytics() {
 
         reviewListEl.appendChild(item);
     });
+}
+
+// ---------- CONFETTI ----------
+function launchConfetti() {
+    const colors = ["#E87722", "#0C2340", "#FFD700", "#FFFFFF", "#2E7D32"];
+    confettiContainer.classList.remove("hidden");
+    confettiContainer.innerHTML = "";
+
+    for (let i = 0; i < 80; i++) {
+        const piece = document.createElement("div");
+        piece.className = "confetti-piece";
+        piece.style.left = `${Math.random() * 100}%`;
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.width = `${8 + Math.random() * 8}px`;
+        piece.style.height = `${8 + Math.random() * 8}px`;
+        piece.style.borderRadius = Math.random() > 0.5 ? "50%" : "2px";
+        const duration = 1.8 + Math.random() * 2;
+        const delay = Math.random() * 1;
+        piece.style.animationDuration = `${duration}s`;
+        piece.style.animationDelay = `${delay}s`;
+        confettiContainer.appendChild(piece);
+    }
+
+    setTimeout(() => {
+        confettiContainer.classList.add("hidden");
+        confettiContainer.innerHTML = "";
+    }, 4500);
 }
