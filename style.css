@@ -189,7 +189,7 @@ button:focus-visible {
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    min-width: 200px;
+    min-width: 160px;
     text-align: center;
 }
 
@@ -361,7 +361,7 @@ button:focus-visible {
 
 .match-col {
     flex: 1;
-    min-width: 200px;
+    min-width: 140px;
 }
 
 .match-item {
@@ -430,7 +430,7 @@ button:focus-visible {
 
 .analytics-box {
     flex: 1;
-    min-width: 250px;
+    min-width: 180px;
     background: var(--auburn-slate);
     padding: 20px;
     border-radius: 10px;
@@ -549,4 +549,95 @@ button:focus-visible {
     0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
     80%  { opacity: 1; }
     100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+/* --------------------------------------------------
+   RESPONSIVE — MOBILE
+-------------------------------------------------- */
+@media (max-width: 600px) {
+    .app-header {
+        padding: 14px 16px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .app-header h1 {
+        font-size: 1.2rem;
+    }
+
+    .subtitle {
+        font-size: 0.8rem;
+    }
+
+    .screen {
+        padding: 20px 12px;
+    }
+
+    .card {
+        padding: 18px 14px;
+    }
+
+    .mode-buttons {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .mode-btn {
+        margin: 6px 0;
+        min-width: unset;
+        width: 100%;
+    }
+
+    .options-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .top-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .status {
+        flex-wrap: wrap;
+    }
+
+    .status-badge {
+        font-size: 0.78rem;
+        padding: 3px 8px;
+    }
+
+    .primary-btn,
+    .secondary-btn {
+        font-size: 0.9rem;
+        padding: 10px 14px;
+    }
+
+    .results-buttons {
+        flex-direction: column;
+    }
+
+    .analytics-grid {
+        flex-direction: column;
+    }
+
+    .analytics-box {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .match-row {
+        flex-direction: column;
+    }
+
+    .match-col {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .question-text {
+        font-size: 1rem;
+    }
 }
